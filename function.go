@@ -51,6 +51,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(os.Stderr, "NatureRemo mini does not support illumination value")
 		} else {
 			dv = d // only use the first device
+			break
 		}
 	}
 	if dv == nil {
