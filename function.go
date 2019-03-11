@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/tenntenn/natureremo"
@@ -31,19 +32,26 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 	c := natureremo.NewClient(token)
 	ctx := context.Background()
 	// get devices
-	ds, err := c.DeviceService.GetAll(ctx)
+	dvs, err := c.DeviceService.GetAll(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting devices: %s", err.Error())
 		fmt.Fprint(w, "Failed")
 		return
 	}
-	fmt.Printf("Num devices : %d\n", len(ds))
-	if len(ds) == 0 {
+	fmt.Printf("Num devices : %d\n", len(dvs))
+	if len(dvs) == 0 {
 		fmt.Fprintln(os.Stderr, "Could not find devices")
 		fmt.Fprint(w, "Failed")
 		return
 	}
-	d := ds[0] // only use the first device
+	var dv *natureremo.Device
+	for _, d := range dvs {
+		if strings.Contains(d.FirmwareVersion, "Remo-mini") {
+			fmt.Fprintln(os.Stderr, "NatureRemo mini does not support illumination value")
+		} else {
+			dv = d // only use the first device
+		}
+	}
 
 	// get appliances and turn off signal
 	acs, err := c.ApplianceService.GetAll(ctx)
@@ -84,7 +92,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 	// turn off light until a room gets dark
 	count := 10
 	go func() {
-		t := time.NewTicker(2 * time.Second)
+		t := time.NewTicker(10 * time.Second)
 		for {
 			select {
 			case <-t.C:
@@ -95,10 +103,11 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 				}
 				count--
 				// get sensor value
-				sv := d.NewestEvents[natureremo.SensortypeIllumination]
+				sv := dv.NewestEvents[natureremo.SensortypeIllumination]
 				il := sv.Value
 				fmt.Printf("Illumination value : %f\n", il)
-				if il >= illuminationThreshold {
+				// if failed to get sensor value, it is zero
+				if il >= illuminationThreshold || il == 0.0 {
 					err := c.SignalService.Send(ctx, sg)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error executing signal : %s", err.Error())
