@@ -14,6 +14,7 @@ import (
 
 const (
 	illuminationThreshold  = 20
+	lightTurnOffInterval   = 5 * time.Second
 	lightApplianceName     = "Light" // check with yout nature remo app
 	lightTurnOffSignalName = "off"
 )
@@ -92,7 +93,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 	// turn off light until a room gets dark
 	count := 10
 	go func() {
-		t := time.NewTicker(10 * time.Second)
+		t := time.NewTicker(lightTurnOffInterval)
 		for {
 			select {
 			case <-t.C:
@@ -107,7 +108,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 				il := sv.Value
 				fmt.Printf("Illumination value : %f\n", il)
 				// if failed to get sensor value, it is zero
-				if il >= illuminationThreshold || il == 0.0 {
+				if il >= illuminationThreshold {
 					err := c.SignalService.Send(ctx, sg)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error executing signal : %s", err.Error())
