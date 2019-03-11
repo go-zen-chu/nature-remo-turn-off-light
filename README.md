@@ -15,6 +15,8 @@ After you activate cloud function, copy and paste function.go & go.mod in https:
 
 ![](./img/cloud_function.png)
 
+Set environment variable, NATURE_REMO_GLOBAL_TOKEN which can be gotten from https://home.nature.global/
+
 If you want to kick function repeatedly, then use https://console.cloud.google.com/cloudscheduler and create a task like
 
 ```
