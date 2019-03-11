@@ -21,7 +21,7 @@ If you want to kick function repeatedly, then use https://console.cloud.google.c
 nature-remo-turn-off-light	  * 23 * * *   <target is your function url>
 ```
 
-![](,/img/cloud_scheduler.png)
+![](./img/cloud_scheduler.png)
 
 If you succeeded in running function, you will get logs like follows
 
