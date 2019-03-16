@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	illuminationThreshold  = 50
+	illuminationThreshold  = 100
 	lightTurnOffInterval   = 15 * time.Second
 	lightApplianceName     = "Light" // check with yout nature remo app
 	lightTurnOffSignalName = "off"
