@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	illuminationThreshold  = 20
-	lightTurnOffInterval   = 5 * time.Second
+	illuminationThreshold  = 100
+	lightTurnOffInterval   = 15 * time.Second
 	lightApplianceName     = "Light" // check with yout nature remo app
 	lightTurnOffSignalName = "off"
 )
@@ -109,6 +109,11 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				count--
+				dv, err = c.DeviceService.Update(ctx, dv)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error updating device : %s", err.Error())
+					continue
+				}
 				// get sensor value
 				sv := dv.NewestEvents[natureremo.SensortypeIllumination]
 				il := sv.Value
