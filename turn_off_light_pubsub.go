@@ -3,8 +3,8 @@ package p
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -19,15 +19,18 @@ const (
 	lightTurnOffSignalName = "off"
 )
 
+type PubSubMessage struct {
+	Data []byte `json:"data"`
+}
+
 // TurnOffLight : Turn off light via Nature Remo API
 // Make sure you set environment variable and token
-func TurnOffLight(w http.ResponseWriter, r *http.Request) {
+func TurnOffLight(pubSubCtx context.Context, m PubSubMessage) error {
+	fmt.Printf("%s\n", string(m.Data))
 	// get token
 	token := os.Getenv("NATURE_REMO_GLOBAL_TOKEN")
 	if token == "" {
-		fmt.Fprintln(os.Stderr, "Error getting env var: NATURE_REMO_GLOBAL_TOKEN")
-		fmt.Fprintf(w, "Failed")
-		return
+		return errors.New("Error getting env var: NATURE_REMO_GLOBAL_TOKEN")
 	}
 	// create client
 	c := natureremo.NewClient(token)
@@ -35,15 +38,11 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 	// get devices
 	dvs, err := c.DeviceService.GetAll(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting devices: %s", err.Error())
-		fmt.Fprint(w, "Failed")
-		return
+		return fmt.Errorf("Error getting devices: %s", err.Error())
 	}
 	fmt.Printf("Num devices : %d\n", len(dvs))
 	if len(dvs) == 0 {
-		fmt.Fprintln(os.Stderr, "Could not find devices")
-		fmt.Fprint(w, "Failed")
-		return
+		return errors.New("Could not find devices")
 	}
 	var dv *natureremo.Device
 	for _, d := range dvs {
@@ -55,23 +54,17 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if dv == nil {
-		fmt.Fprintln(os.Stderr, "There was no device supporting measuring illumination value")
-		fmt.Fprint(w, "Failed")
-		return
+		return errors.New("There was no device supporting measuring illumination value")
 	}
 
 	// get appliances and turn off signal
 	acs, err := c.ApplianceService.GetAll(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting appliances: %s", err.Error())
-		fmt.Fprint(w, "Failed")
-		return
+		return fmt.Errorf("Error getting appliances: %s", err.Error())
 	}
 	fmt.Printf("Num appliances : %d\n", len(acs))
 	if len(acs) == 0 {
-		fmt.Fprintln(os.Stderr, "Could not find appliances")
-		fmt.Fprint(w, "Failed")
-		return
+		return errors.New("Could not find appliances")
 	}
 	var ac *natureremo.Appliance
 	for _, a := range acs {
@@ -80,9 +73,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if ac == nil {
-		fmt.Fprintf(os.Stderr, "Could not find light with nickname : %s", lightApplianceName)
-		fmt.Fprint(w, "Failed")
-		return
+		return fmt.Errorf("Could not find light with nickname : %s", lightApplianceName)
 	}
 	var sg *natureremo.Signal
 	for _, s := range ac.Signals {
@@ -91,9 +82,7 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if sg == nil {
-		fmt.Fprintf(os.Stderr, "Could not find turn off signal : %s", lightTurnOffSignalName)
-		fmt.Fprint(w, "Failed")
-		return
+		return fmt.Errorf("Could not find turn off signal : %s", lightTurnOffSignalName)
 	}
 
 	// turn off light until a room gets dark
@@ -132,5 +121,5 @@ func TurnOffLight(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	fmt.Fprint(w, "OK")
+	return nil
 }
